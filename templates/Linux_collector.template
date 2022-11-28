@@ -1,0 +1,17 @@
+autoexec:
+  argv: ["artifacts", "collect", "-v", "--require_admin",
+         "--logfile", "CollectRaptor_Linux_output_$USER.log",
+         "Linux.Search.FileFinder",
+         "--output", "CollectRaptor_Linux_output_$USER.zip",
+         "--password", "<PASSWORD>",
+         "--args", "Upload_File=Y",
+         "--args", "SearchFilesGlobTable=Glob\n___files___",
+         "Linux.Sys.Pslist",
+         "Linux.Proc.Modules",
+         "Linux.Sys.Maps",
+         "Linux.Network.Netstat",
+         "Linux.Proc.Arp",
+         "Linux.Mounts",
+         "Linux.Detection.AnomalousFiles",
+         "Linux.Sys.SUID",
+         "Linux.Sys.ACPITables"]

@@ -1,0 +1,57 @@
+# Build standalone collector binary:
+# .\velociraptor-v0.6.6-2-windows-amd64.exe config repack velo_light.yaml velo_light.exe
+autoexec:
+  argv: ["artifacts", "collect", "-v", "--require_admin",
+         "--logfile", "Velociraptor_$COMPUTERNAME.log",
+         "--output", "$COMPUTERNAME.zip", "--format=csv", "--password", "<PASSWORD>",
+         "Windows.KapeFiles.Targets",
+         "--args", "Device=$SystemDrive",
+         # Run the collection across all VSS and collect only unique changes.
+         #"--args", "VSSAnalysis=Y",
+         # Kape default triage.
+         "--args", "KapeTriage=Y",
+         # In completion to KapeTriage
+         # The RecycleBin artefact can be removed to better control the resulting collection file.
+         "--args", "RecycleBin=Y",
+         "--args", "_MFTMirr=Y",
+         "--args", "PowerShellConsole=Y",
+         "--args", "RDPCache=Y",
+         "--args", "ScheduledTasks=Y",
+         "--args", "StartupFolders=Y",
+         "--args", "CloudStorage_Metadata=Y",
+         "--args", "CombinedLogs=Y",
+         # Web browsers history, bookmarks, ...: Edge, Chrome, Firefox, and Internet Explorer
+         "--args", "WebBrowsers=Y",
+         "--args", "InternetExplorer=Y",
+         # Remote admin tools.
+         "--args", "RemoteAdmin=Y",
+         # Windows Firewall Logs
+         "--args", "WindowsFirewall=Y",
+         # USB devices log files: Setupapi.log XP, Setupapi.log Win7+
+         "--args", "USBDevicesLogs=Y",
+         # Anti-virus logs
+         "--args", "Antivirus=Y",
+         # Transfer tools.
+         "--args", "BITS=Y",
+         "--args", "CertUtil=Y",
+         # Webservers logs.
+         "--args", "WebServers=Y",
+         # Exchange server related logs.
+         "--args", "Exchange=Y",
+         "--args", "ExchangeClientAccess=Y",
+         # WSL files.
+         "--args", "WSL=Y",
+         "--args", "LinuxOnWindowsProfileFiles=Y",
+         # Windows text editors apps.
+         "--args", "MicrosoftOneNote=Y",
+         "--args", "MicrosoftStickyNotes=Y",
+         "--args", "Notepad__=Y",
+         # MS SQL ErrorLogs : MS SQL Errorlog, MS SQL Errorlogs
+         "--args", "MSSQLErrorLog=Y",
+         "Windows.Network.NetstatEnriched",
+         "Windows.System.Pslist",
+         "Windows.System.UntrustedBinaries",
+         "Windows.Detection.BinaryRename",
+         # Custom artifacts.
+         #"Custom.Windows.Detection.Malfind",
+        ]

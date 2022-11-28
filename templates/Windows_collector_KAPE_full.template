@@ -1,0 +1,413 @@
+autoexec:
+  argv:
+  - artifacts
+  - collect
+  - Collector
+  - --logfile
+  - Velociraptor_$COMPUTERNAME.log
+  - -v
+  - --require_admin
+  artifact_definitions:
+  - name: Exchange.Custom.Windows.Triage.HighValueMemory
+    description: |
+      Dump process memory and upload to the server
+
+      Common Archive Utilities: Winrar, Winzip, 7-zip, Winscp, FileZilla
+
+      Common Exfil Utilities: robocopy, rclone, mega*
+
+      Consoles: cmd, powershell
+    parameters:
+    - name: processRegexCsv
+      default: |
+        processName
+        mega
+        winrar
+        winzip
+        7z
+        winscp
+        filezilla
+        robocopy
+        rclone
+        notepad
+        cmd
+        powershell
+      type: regex
+    sources:
+    - precondition: |2
+
+        SELECT OS From info() where OS = 'windows'
+      query: |2
+
+        LET processRegexList <= SELECT processName
+                                FROM parse_csv(filename=processRegexCsv, accessor='data')
+
+        LET processes(processRegex) = SELECT Name as ProcessName,
+                                            CommandLine,
+                                            Pid
+                                      FROM pslist()
+                                      WHERE Name =~ processRegex
+
+        LET processList = SELECT *
+                          FROM foreach(
+                                  row=processRegexList,
+                                  query={ SELECT * from processes(processRegex=processName) }
+                          )
+
+        SELECT *
+        FROM foreach(
+                row=processList,
+                query={
+                    SELECT ProcessName,
+                           CommandLine,
+                           Pid,
+                           FullPath,
+                           upload(file=FullPath,
+                                  name=format(format="%v_%v",args=[ProcessName,Pid])) as CrashDump
+                    FROM proc_dump(pid=Pid)
+                }
+              )
+      queries:
+      - LET processRegexList<=SELECT processName FROM parse_csv(filename=processRegexCsv,
+        accessor='data')
+      - LET processes(processRegex)=SELECT Name AS ProcessName, CommandLine, Pid FROM
+        pslist() WHERE Name =~ processRegex
+      - LET processList=SELECT * FROM foreach(row=processRegexList, query= { SELECT
+        * FROM processes(processRegex=processName)})
+      - SELECT * FROM foreach(row=processList, query= { SELECT ProcessName, CommandLine,
+        Pid, FullPath, upload(file=FullPath, name=format(format="%v_%v", args= [ProcessName,
+        Pid])) AS CrashDump FROM proc_dump(pid=Pid)})
+  - name: Exchange.Windows.Detection.Malfind
+    description: "This artifact checks the VAD for executable sections that are not
+      maped to disk \nand has suspicious content which may indicate process injection.\n\nUser
+      options allow targetting process, modifying suspicious content yara, or \nupload
+      of suspicious section.\n\nDefault suspicious content includes headers: MZ, default
+      cobalt strike stomped, \nor well known suspicious strings, meterpreter and Cobalt
+      Strike.\n\nNote: Add additional yara as desired.  \nExpect some false positives
+      and triage accordingly.  \n"
+    parameters:
+    - name: ProcessRegex
+      default: .
+      description: A regex applied to process names.
+      type: regex
+    - name: PidRegex
+      default: .
+      type: regex
+    - name: ProtectionRegex
+      default: xrw
+      description: "Protection of section. Default is Executable but can customise
+        for other usecases.  \nExamples: x for executable, r for read, w for write.
+        \ \n(x|r|w) or xrw for multiple.\nx-w for strict.\n"
+      type: regex
+    - name: SectionDataGuiSize
+      default: "10000"
+      description: Size of SectionData to show in gui. For large files, use UploadSection
+      type: int
+    - name: SuspiciousContent
+      default: "rule suspicious {\n    meta:\n        author = \"Matt Green - @mgreen27\"\n
+        \       description = \"Suspicious unbacked on disk executable section content\"\n
+        \       date = \"2022-09-30\"\n        \n    strings:\n        $header1 =
+        \"MZ\"\n        $header2 = { 00 00 41 52 55 48 } // cobalt strike stomped
+        dll\n        $header3 = { FC } // shellcode stagers\n         \n        $body1
+        = \"This program cannot be run in DOS mode\" \n        $body2 = \"wininet\"
+        \ \n        $body3 = \"hws2_\"  \n        $body4 = \"hwini\"  \n        $body5
+        = { FC E8 8? 00 00 00 60 }     // shellcode prologe in metasploit\n        \n
+        \   condition:\n        $header1 at 0 or $header2 at 0 or $header3 at 0\n
+        \           or any of ($body*) \n}\n\nrule win_cobalt_strike_auto {\n meta:\n
+        \  author = \"Felix Bilstein - yara-signator at cocacoding dot com\"\n   date
+        = \"2019-11-26\"\n   version = \"1\"\n   description = \"autogenerated rule
+        brought to you by yara-signator\"\n   tool = \"yara-signator 0.2a\"\n   malpedia_reference
+        = \"https://malpedia.caad.fkie.fraunhofer.de/details/win.cobalt_strike\"\n
+        \  malpedia_license = \"CC BY-SA 4.0\"\n   malpedia_sharing = \"TLP:WHITE\"\n\n
+        strings:\n   $sequence_0 = { 3bc7 750d ff15???????? 3d33270000 }\n   $sequence_1
+        = { e9???????? eb0a b801000000 e9???????? }\n   $sequence_2 = { 8bd0 e8????????
+        85c0 7e0e }\n   $sequence_3 = { ffb5f8f9ffff ff15???????? 8b4dfc 33cd e8????????
+        c9 c3 }\n   $sequence_4 = { e8???????? e9???????? 833d?????????? 7505 e8????????
+        }\n   $sequence_5 = { 250000ff00 33d0 8b4db0 c1e908 }\n   $sequence_6 = {
+        ff75f4 ff7610 ff761c ff75fc }\n   $sequence_7 = { 8903 6a06 eb39 33ff 85c0
+        762b 03f1 }\n   $sequence_8 = { 894dd4 8b458c d1f8 894580 8b45f8 c1e818 0fb6c8
+        }\n   $sequence_9 = { 890a 8b4508 0fb64804 81e1ff000000 c1e118 8b5508 0fb64205
+        }\n   $sequence_10 = { 33d2 e8???????? 48b873797374656d3332 4c8bc7 488903
+        49ffc0 }\n   $sequence_11 = { 488bd1 498d4bd8 498943e0 498943e8 }\n   $sequence_12
+        = { b904000000 486bc90e 488b542430 4c8b442430 418b0c08 8b0402 }\n   $sequence_13
+        = { ba80000000 e8???????? 488d4c2438 e8???????? 488d4c2420 8bd0 e8????????
+        }\n   $sequence_14 = { 488b4c2430 8b0401 89442428 b804000000 486bc004 }\n
+        \  $sequence_15 = { 4883c708 4883c304 49ffc3 48ffcd 0f854fffffff 488d4c2420
+        }\n\ncondition:\n    7 of them\n}\n\nrule win_meterpreter_auto {\n    meta:\n
+        \       author = \"Felix Bilstein - yara-signator at cocacoding dot com\"\n
+        \       date = \"2022-08-05\"\n        version = \"1\"\n        description
+        = \"Detects win.meterpreter.\"\n        info = \"autogenerated rule brought
+        to you by yara-signator\"\n        tool = \"yara-signator v0.6.0\"\n        signator_config
+        = \"callsandjumps;datarefs;binvalue\"\n        malpedia_reference = \"https://malpedia.caad.fkie.fraunhofer.de/details/win.meterpreter\"\n
+        \       malpedia_rule_date = \"20220805\"\n        malpedia_hash = \"6ec06c64bcfdbeda64eff021c766b4ce34542b71\"\n
+        \       malpedia_version = \"20220808\"\n        malpedia_license = \"CC BY-SA
+        4.0\"\n        malpedia_sharing = \"TLP:WHITE\"\n\n    strings:\n        $sequence_0
+        = { e22b e5f6 4f 1c8b }\n        $sequence_1 = { 90 90 90 55 e4ec 53 8b22
+        }\n        $sequence_2 = { 50 686cd4408e ffd6 8b0d???????? 83c18a }\n        $sequence_3
+        = { 008b35a8c19f 006860 2f 0000 52 ffd6 }\n        $sequence_4 = { 8b87047945f4
+        6a01 50 52 c745fc00000000 ff08 98 }\n        $sequence_5 = { 57 40 388bf083c4cf
+        86f6 }\n        $sequence_6 = { 8932 8b700c 83c204 4e 3bce 74ef ff9a0c8b5c03
+        }\n        $sequence_7 = { 043b 8801 41 0fc2049088 0135???????? 4f 75b5 }\n
+        \       $sequence_8 = { 6c 50 048b 55 1491 48 }\n        $sequence_9 = { 76e1
+        8bf0 85f6 750e }\n\n    condition:\n        7 of them\n}\n"
+      description: A yara rule of suspicious section content
+      type: yara
+    - name: NumberOfHits
+      default: "1"
+      description: THis artifact will stop by default at one hit. This setting allows
+        additional hits
+      type: int
+    - name: ContextBytes
+      default: "0"
+      description: Include this amount of bytes around hit as context.
+      type: int
+    - name: UploadSection
+      description: Upload suspicious section.
+      type: bool
+    sources:
+    - query: "LET processes = SELECT Pid, Name,Exe,CommandLine,CreateTime\n  FROM
+        pslist()\n  WHERE Name =~ ProcessRegex\n      AND format(format=\"%d\", args=Pid)
+        =~ PidRegex\n      AND log(message=\"Scanning pid %v : %v\", args=[Pid, Name])\n\nLET
+        hits = SELECT * FROM foreach(\n    row=processes,\n    query={\n      SELECT
+        CreateTime,Pid, Name,\n          format(format='%x-%x', args=[Address, Address+Size])
+        AS AddressRange,\n          Protection, Address as _Address,\n          Size
+        as SectionSize,\n          pathspec(\n              DelegateAccessor=\"process\",\n
+        \             DelegatePath=Pid,\n              Path=Address) AS _PathSpec\n
+        \     FROM vad(pid=Pid)\n      WHERE NOT MappingName\n          AND Protection
+        =~ ProtectionRegex\n    })\n    \nLET results <= SELECT *,\n      format(format='%
+        x',args=read_file(\n               accessor='offset',\n               filename=_PathSpec,\n
+        \              length=2)) as HexHeader,\n      magic(path=_PathSpec, accessor='offset')
+        as DataMagic,\n      base64encode(string=read_file(\n               accessor='offset',\n
+        \              filename=_PathSpec,\n               length= if(condition= SectionDataGuiSize
+        > SectionSize,\n                          then= SectionSize,\n                          else=
+        SectionDataGuiSize)\n                  )) as SectionData,\n      YaraHit,
+        _PathSpec\n  FROM foreach(row=hits,\n      query={\n          SELECT\n              CreateTime,Pid,
+        Name,_Address, AddressRange,Protection,SectionSize,\n              enumerate(items=dict(\n
+        \                 Rule=Rule,\n                  Meta=Meta,\n              \tTags=Tags,\n
+        \             \tString=String)) as YaraHit,\n              _PathSpec\n          FROM
+        yara(\n                      accessor='offset',\n                      files=_PathSpec,
+        \n                      rules=SuspiciousContent,\n                      end=SectionSize,
+        \ key='X', \n                      number=NumberOfHits,\n                      context=ContextBytes\n
+        \                 )\n          GROUP BY CreateTime,Pid, Name, AddressRange\n
+        \     })\n  \n  \nLET upload_section = SELECT *,\n          upload(accessor='sparse',
+        \n            file=pathspec(\n              DelegateAccessor=\"process\",\n
+        \             DelegatePath=Pid,\n              Path=[dict(Offset=_Address,
+        Length=SectionSize),]), \n              name=format(format='%v-%v_%v.bin',args=
+        [ Name, Pid, AddressRange ])\n              ) as SectionDump\n      FROM results\n
+        \     GROUP BY CreateTime,Pid, Name,_Address, AddressRange\n\nSELECT *,\n
+        \ process_tracker_callchain(id=Pid).Data as ProcessChain\nFROM if(condition=
+        UploadSection,\n          then= upload_section,\n          else= results)\n
+        \ \n"
+      queries:
+      - 'LET processes=SELECT Pid, Name, Exe, CommandLine, CreateTime FROM pslist()
+        WHERE Name =~ ProcessRegex AND format(format="%d", args=Pid) =~ PidRegex AND
+        log(message="Scanning pid %v : %v", args= [Pid, Name])'
+      - LET hits=SELECT * FROM foreach(row=processes, query= { SELECT CreateTime,
+        Pid, Name, format(format='%x-%x', args= [Address, Address + Size]) AS AddressRange,
+        Protection, Address AS _Address, Size AS SectionSize, pathspec(DelegateAccessor="process",
+        DelegatePath=Pid, Path=Address) AS _PathSpec FROM vad(pid=Pid) WHERE NOT MappingName
+        AND Protection =~ ProtectionRegex})
+      - LET results<=SELECT *, format(format='% x', args=read_file(accessor='offset',
+        filename=_PathSpec, length=2)) AS HexHeader, magic(path=_PathSpec, accessor='offset')
+        AS DataMagic, base64encode(string=read_file(accessor='offset', filename=_PathSpec,
+        length=if(condition=SectionDataGuiSize > SectionSize, then=SectionSize, else=SectionDataGuiSize)))
+        AS SectionData, YaraHit, _PathSpec FROM foreach(row=hits, query= { SELECT
+        CreateTime, Pid, Name, _Address, AddressRange, Protection, SectionSize, enumerate(items=dict(Rule=Rule,
+        Meta=Meta, Tags=Tags, String=String)) AS YaraHit, _PathSpec FROM yara(accessor='offset',
+        files=_PathSpec, rules=SuspiciousContent, end=SectionSize, key='X', number=NumberOfHits,
+        context=ContextBytes) GROUP BY CreateTime, Pid, Name, AddressRange})
+      - LET upload_section=SELECT *, upload(accessor='sparse', file=pathspec(DelegateAccessor="process",
+        DelegatePath=Pid, Path= [dict(Offset=_Address, Length=SectionSize), ]), name=format(format='%v-%v_%v.bin',
+        args= [Name, Pid, AddressRange])) AS SectionDump FROM results GROUP BY CreateTime,
+        Pid, Name, _Address, AddressRange
+      - SELECT *, process_tracker_callchain(id=Pid).Data AS ProcessChain FROM if(condition=UploadSection,
+        then=upload_section, else=results)
+  - name: Collector
+    parameters:
+    - name: Artifacts
+      default: |-
+        [
+         "Windows.KapeFiles.Targets",
+         "Windows.Search.FileFinder",
+         "Windows.System.Pslist",
+         "Exchange.Custom.Windows.Triage.HighValueMemory",
+         "Exchange.Windows.Detection.Malfind",
+         "Windows.Network.NetstatEnriched",
+         "Windows.System.UntrustedBinaries",
+         "Windows.Detection.BinaryRename",
+         "Windows.Sysinternals.Autoruns"
+        ]
+      type: json_array
+    - name: Parameters
+      default: |-
+        {
+         "Windows.KapeFiles.Targets": {
+          "VSSAnalysis": "Y",
+          "Antivirus": "Y",
+          "BITS": "Y",
+          "CertUtil": "Y",
+          "InternetExplorer": "Y",
+          "KapeTriage": "Y",
+          "LinuxOnWindowsProfileFiles": "Y",
+          "_MFTMirr": "Y",
+          "MicrosoftOneNote": "Y",
+          "MicrosoftStickyNotes": "Y",
+          "MSSQLErrorLog": "Y",
+          "MiniTimelineCollection": "Y",
+          "Notepad__": "Y",
+          "PowerShellConsole": "Y",
+          "RecycleBin": "Y",
+          "RemoteAdmin": "Y",
+          "RDPCache": "Y",
+          "ScheduledTasks": "Y",
+          "StartupFolders": "Y",
+          "StartupInfo": "Y",
+          "USBDetective": "Y",
+          "WSL": "Y",
+          "WebBrowsers": "Y",
+          "WindowsFirewall": "Y",
+          "WindowsTimeline": "Y",
+          "Exchange": "Y",
+          "ExchangeClientAccess": "Y",
+          "LiveUserFiles": "Y",
+          "MemoryFiles": "Y",
+          "GroupPolicy": "Y",
+          "OutlookPSTOST": "Y",
+          "FileExplorerReplacements": "Y"
+         },
+         "Windows.Search.FileFinder": {
+          "Upload_File": "Y",
+          "SearchFilesGlob": "*\\$MFT",
+          "SearchFilesGlobTable": "Glob\n",
+          "Accessor": "ntfs"
+         }
+        }
+      type: json
+    - name: encryption_scheme
+      default: Password
+    - name: encryption_args
+      default: |-
+        {
+         "public_key": "",
+         "password": "<PASSWORD>"
+        }
+      type: json
+    - name: Level
+      default: "5"
+      type: int
+    - name: Format
+      default: csv
+    - name: OutputPrefix
+    - name: CpuLimit
+      default: "0"
+      type: int
+    - name: ProgressTimeout
+      default: "0"
+      type: int
+    - name: Timeout
+      default: "0"
+      type: int
+    - name: target_args
+      default: |-
+        {
+         "bucket": "",
+         "GCSKey": "",
+         "credentialsKey": "",
+         "credentialsSecret": "",
+         "region": "",
+         "endpoint": "",
+         "serverSideEncryption": ""
+        }
+      type: json
+    sources:
+    - query: |
+        // Add all the tools we are going to use to the inventory.
+        LET _ <= SELECT inventory_add(tool=ToolName, hash=ExpectedHash)
+         FROM parse_csv(filename="/uploads/inventory.csv", accessor="me")
+         WHERE log(message="Adding tool " + ToolName)
+
+        LET baseline <= SELECT Fqdn, basename(path=Exe) AS Exe FROM info()
+
+        // Make the filename safe on windows but we trust the OutputPrefix.
+        LET filename <= OutputPrefix + regex_replace(
+            source=format(format="Collection-%s-%s",
+                          args=[baseline[0].Fqdn,
+                                timestamp(epoch=now()).MarshalText]),
+            re="[^0-9A-Za-z\\-]", replace="_")
+
+        -- Make a random hex string as a random password
+        LET RandomPassword <= SELECT format(format="%02x",
+              args=rand(range=255)) AS A
+        FROM range(end=25)
+
+        LET pass = SELECT * FROM switch(a={
+
+           -- For X509 encryption we use a random session password.
+           SELECT join(array=RandomPassword.A) as Pass From scope()
+           WHERE encryption_scheme =~ "pgp|x509"
+            AND log(message="I will generate a container password using the %v scheme",
+                    args=encryption_scheme)
+
+        }, b={
+
+           -- Otherwise the user specified the password.
+           SELECT encryption_args.password as Pass FROM scope()
+           WHERE encryption_scheme =~ "password"
+
+        }, c={
+
+           -- No password specified.
+           SELECT Null as Pass FROM scope()
+        })
+
+        -- For X509 encryption_scheme, store the encrypted
+        -- password in the metadata file for later retrieval.
+        LET ContainerMetadata = if(
+            condition=encryption_args.public_key,
+            then=dict(
+               EncryptedPass=pk_encrypt(data=pass[0].Pass,
+                  public_key=encryption_args.public_key,
+               scheme=encryption_scheme),
+            Scheme=encryption_scheme,
+            PublicKey=encryption_args.public_key))
+        LET _ <= log(message="Will collect package " + filename)
+
+        SELECT * FROM collect(artifacts=Artifacts,
+              args=Parameters, output=filename + ".zip",
+              cpu_limit=CpuLimit,
+              progress_timeout=ProgressTimeout,
+              timeout=Timeout,
+              password=pass[0].Pass,
+              level=Level,
+              format=Format,
+              metadata=ContainerMetadata)
+  - name: Generic.Utils.FetchBinary
+    parameters:
+    - name: SleepDuration
+      default: "0"
+      type: int
+    - name: ToolName
+    - name: ToolInfo
+    - name: IsExecutable
+      default: "Y"
+      type: bool
+    sources:
+    - query: |
+        LET RequiredTool <= ToolName
+
+        LET matching_tools <= SELECT ToolName, Filename
+        FROM parse_csv(filename="/uploads/inventory.csv", accessor="me")
+        WHERE RequiredTool = ToolName
+
+        LET get_ext(filename) = parse_string_with_regex(
+              regex="(\\.[a-z0-9]+)$", string=filename).g1
+
+        LET temp_binary <= if(condition=matching_tools,
+        then=tempfile(
+                 extension=get_ext(filename=matching_tools[0].Filename),
+                 remove_last=TRUE,
+                 permissions=if(condition=IsExecutable, then="x")))
+
+        SELECT copy(filename=Filename, accessor="me", dest=temp_binary) AS FullPath,
+               Filename AS Name
+        FROM matching_tools

@@ -1,0 +1,71 @@
+# Build standalone full collector binary
+# .\velociraptor-v0.6.6-2-windows-amd64.exe config repack velo_full.yaml velo_full.exe
+autoexec:
+  argv: ["artifacts", "collect", "-v", "--require_admin",
+         "--logfile", "Velociraptor_$COMPUTERNAME.log",
+         "Windows.KapeFiles.Targets",
+         "--output", "$COMPUTERNAME.zip", "--password", "<PASSWORD>",
+         "--args", "Device=$SystemDrive",
+         # Run the collection across all VSS and collect only unique changes.
+         "--args", "VSSAnalysis=Y",
+         # Kape default triage.
+         "--args", "KapeTriage=Y",
+         # In completion to KapeTriage
+         # The RecycleBin artefact can be removed to better control the resulting collection file.
+         "--args", "RecycleBin=Y",
+         "--args", "_MFTMirr=Y",
+         "--args", "PowerShellConsole=Y",
+         "--args", "RDPCache=Y",
+         "--args", "ScheduledTasks=Y",
+         "--args", "StartupFolders=Y",
+         "--args", "CloudStorage_Metadata=Y",
+         "--args", "CombinedLogs=Y",
+         # Web browsers history, bookmarks, ...: Edge, Chrome, Firefox, and Internet Explorer
+         "--args", "WebBrowsers=Y",
+         "--args", "InternetExplorer=Y",
+         # Remote admin tools.
+         "--args", "RemoteAdmin=Y",
+         # Windows Firewall Logs
+         "--args", "WindowsFirewall=Y",
+         # USB devices log files: Setupapi.log XP, Setupapi.log Win7+
+         "--args", "USBDevicesLogs=Y",
+         # Anti-virus logs
+         "--args", "Antivirus=Y",
+         # Transfer tools.
+         "--args", "BITS=Y",
+         "--args", "CertUtil=Y",
+         # Webservers logs.
+         "--args", "WebServers=Y",
+         # Exchange server related logs.
+         "--args", "Exchange=Y",
+         "--args", "ExchangeClientAccess=Y",
+         # WSL files.
+         "--args", "WSL=Y",
+         "--args", "LinuxOnWindowsProfileFiles=Y",
+         # Windows text editors apps.
+         "--args", "MicrosoftOneNote=Y",
+         "--args", "MicrosoftStickyNotes=Y",
+         "--args", "Notepad__=Y",
+         # MS SQL ErrorLogs : MS SQL Errorlog, MS SQL Errorlogs
+         "--args", "MSSQLErrorLog=Y",
+         # Files collection.
+         # Users folders files.
+         "--args", "LiveUserFiles=Y",
+         # Memory dump files: hiberfil.sys, pagefile.sys, swapfile.sys
+         "--args", "MemoryFiles=Y",
+         # Current Group Policy Enforcement: Local Group Policy INI Files, Local Group Policy Files - Registry Policy Files, Local Group Policy Files - Startup/Shutdown Scripts
+         "--args", "GroupPolicy=Y",
+         # Managed Object Format (MOF) files
+         "--args", "MOF=Y",
+         # Outlook PST and OST files: PST XP, OST XP, PST, OST - may generate a lot of data
+         "--args", "OutlookPSTOST=Y",
+         # Windows explorer-like utilities.
+         "--args", "FileExplorerReplacements=Y",
+         "Windows.System.Pslist",
+         "Windows.Detection.BinaryRename",
+         "Windows.System.UntrustedBinaries",
+         "Windows.Network.NetstatEnriched",
+         "Windows.Sys.FirewallRules"
+         # Custom artifacts.
+         #"Custom.Windows.Detection.Malfind",
+        ]
