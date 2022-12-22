@@ -4,14 +4,17 @@ import os
 import pathlib
 import shutil
 
+from loguru import logger
+
 from helpers.enum import OsArchitecture
 from helpers.VelociraptorPacker import VelociraptorPacker
 
 
 class WindowsFromKapeTargets:
-    def __init__(self, target_os: OsArchitecture, artifacts_set: str, output_dir: str = None, tools_csv: str = None):
+    def __init__(self, target_os: OsArchitecture, artifacts_set: str, zip_password: str, output_dir: str = None, tools_csv: str = None):
         self.target_os = target_os
         self.artifacts_set = artifacts_set
+        self.zip_password = zip_password
 
         base_dir = pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent
 
@@ -45,7 +48,16 @@ class WindowsFromKapeTargets:
 
 
     def create_config(self) -> str:
-        shutil.copyfile(self.template, self.output_config)
+        with open(self.template, 'r') as template_file:
+            template_content = template_file.read()
+
+        logger.info(f'Template file will be \'{self.template}\'')
+
+        parametrized = template_content.replace('<PASSWORD>', self.zip_password)
+
+        with open(self.output_config, 'w+') as output_file:
+            output_file.write(parametrized)
+
         return self.output_config
 
 

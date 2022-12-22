@@ -11,8 +11,10 @@ from helpers.VelociraptorPacker import VelociraptorPacker
 
 
 class LinuxFromForensicArtifacts:
-    def __init__(self, target_os: OsArchitecture, yaml_files: list = None, yaml_urls: str = None, template: str = None, output_dir: str = None):
+    def __init__(self, target_os: OsArchitecture, zip_password: str, yaml_files: list = None, yaml_urls: str = None, template: str = None, output_dir: str = None):
         self.target_os = target_os
+        self.zip_password = zip_password
+
         self.yaml_files = yaml_files
         self.yaml_urls = yaml_urls if yaml_urls else [
                 'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/linux.yaml',
@@ -66,7 +68,8 @@ class LinuxFromForensicArtifacts:
             template_content = template_file.read()
 
         logger.info(f'Template file will be \'{self.template}\'')
-        parametrized = template_content.replace('___files___', r'\n'.join(artifact_set))
+
+        parametrized = template_content.replace('___files___', r'\n'.join(artifact_set)).replace('<PASSWORD>', self.zip_password)
 
         with open(self.output_config, 'w+') as output_file:
             output_file.write(parametrized)

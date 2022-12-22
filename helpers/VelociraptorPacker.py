@@ -136,7 +136,7 @@ class VelociraptorPacker:
         logger.info(f'Building Velociraptor collector with command: \'{build_cmd}\'')
 
         process = subprocess.run(shlex.split(build_cmd, posix="win" not in sys.platform), shell=False, capture_output=True)
-        if process.stderr == b'':
+        if process.returncode == 0:
             logger.success(f'Velociraptor collector built to: \'{output_path}\'')
         else:
             logger.error(f'Velociraptor collector could not be built: \'{process.stderr.decode("utf-8").strip()}\'')

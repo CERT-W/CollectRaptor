@@ -34,6 +34,10 @@ if __name__ == '__main__':
     args_parser.add_argument('--only-conf',
                              dest='only_conf',
                              help='Only generate a config file, not the packed Velociraptor binary')
+    args_parser.add_argument('-p', '--password',
+                             dest='zip_password',
+                             default='<PASSWORD>',
+                             help='Password for the encrypted zip produced by the collector. Defaults to \'<PASSWORD>\'')
 
     # Common args - Velociraptor packer.
     # args_parser.add_argument('--velo-path',
@@ -85,6 +89,7 @@ if __name__ == '__main__':
         if args.artifacts_set.startswith('kape'):
             collector_builder = WindowsFromKapeTargets(target_os,
                                                        args.artifacts_set,
+                                                       args.zip_password,
                                                        output_dir=args.output,
                                                        tools_csv=args.tools_csv)
 
@@ -93,6 +98,7 @@ if __name__ == '__main__':
 
         if args.artifacts_set == 'forensic_artifacts':
             collector_builder = LinuxFromForensicArtifacts(target_os,
+                                                           args.zip_password,
                                                            yaml_urls=args.yaml_urls,
                                                            yaml_files=args.yaml_files,
                                                            template=args.template,
