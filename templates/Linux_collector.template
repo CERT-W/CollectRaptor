@@ -1,20 +1,311 @@
 autoexec:
-  argv: ["artifacts", "collect", "-v", "--require_admin",
-         "--logfile", "CollectRaptor_Linux_output_$USER.log",
-         "--output", "CollectRaptor_Linux_output_$USER.zip",
-         "--password", "<PASSWORD>",
-         "--format", "csv",
-         "Linux.Search.FileFinder",
-         "--args", "Upload_File=Y",
-         "--args", "SearchFilesGlobTable=Glob\n___files___",
-         "Generic.Forensic.Timeline",
-         "--args", "timelineGlob=/**",
+  argv:
+  - artifacts
+  - collect
+  - Collector
+  - --logfile
+  - CollectRaptor_Linux_output_$HOSTNAME_$USER.log
+  - -v
+  - --require_admin
+  artifact_definitions:
+  - name: Exchange.Linux.System.PAM
+    description: "This artifact enumerates applicable lines from the files that reside
+      in `/etc/PAM.d/`. This information can be useful for auditing and compliance
+      purposes, or to identify suspicious activity on Linux systems.\n\nFor example,
+      we could use the `RecordFilter` parameter to check for the presence of `pam_exec.so`,
+      which can be used within PAM configuration to invoke arbitrary scripts.  \n\n\nFrom
+      MITRE ATT&CK:\n\nAdversaries may modify pluggable authentication modules (PAM)
+      to access user credentials or enable otherwise unwarranted access to accounts.
+      PAM is a modular system of configuration files, libraries, and executable files
+      which guide authentication for many services. The most common authentication
+      module is PAM_unix.so, which retrieves, sets, and verifies account authentication
+      information in /etc/passwd and /etc/shadow\n\nAdversaries may modify components
+      of the PAM system to create backdoors. PAM components, such as PAM_unix.so,
+      can be patched to accept arbitrary adversary supplied values as legitimate credentials.\n\nMalicious
+      modifications to the PAM system may also be abused to steal credentials. Adversaries
+      may infect PAM resources with code to harvest user credentials, since the values
+      exchanged with PAM components may be plain-text since PAM does not store passwords.\n"
+    parameters:
+    - name: PAMGlob
+      default: /etc/pam.d/*
+    - name: RecordFilter
+      default: .
+      description: Filter used for targeting specific records by content
+    - name: DateAfter
+      description: search for events after this date. YYYY-MM-DDTmm:hh:ssZ
+      type: timestamp
+    - name: DateBefore
+      description: search for events before this date. YYYY-MM-DDTmm:hh:ssZ
+      type: timestamp
+    sources:
+    - query: "LET DateAfterTime <= if(condition=DateAfter,\n  then=timestamp(epoch=DateAfter),
+        else=timestamp(epoch=\"1600-01-01\"))\nLET DateBeforeTime <= if(condition=DateBefore,\n
+        \ then=timestamp(epoch=DateBefore), else=timestamp(epoch=\"2200-01-01\"))
+        \       \nLET PAMGlobList = SELECT Mtime, OSPath\n  FROM glob(globs=split(string=PAMGlob,
+        sep=\",\"))\nSELECT * FROM foreach(row=PAMGlobList, \n              query={
+        SELECT Mtime, \n                             OSPath, \n                             Line
+        AS Record\n                      FROM  parse_lines(filename=OSPath) \n                      WHERE
+        Record =~ RecordFilter\n                      AND Mtime < DateBeforeTime\n
+        \                     AND Mtime > DateAfterTime\n                      AND
+        NOT Record =~ '^#' \n                      AND NOT Record = ''})\n"
+      queries:
+      - LET DateAfterTime<=if(condition=DateAfter, then=timestamp(epoch=DateAfter),
+        else=timestamp(epoch="1600-01-01"))
+      - LET DateBeforeTime<=if(condition=DateBefore, then=timestamp(epoch=DateBefore),
+        else=timestamp(epoch="2200-01-01"))
+      - LET PAMGlobList=SELECT Mtime, OSPath FROM glob(globs=split(string=PAMGlob,
+        sep=","))
+      - SELECT * FROM foreach(row=PAMGlobList, query= { SELECT Mtime, OSPath, Line
+        AS Record FROM parse_lines(filename=OSPath) WHERE Record =~ RecordFilter AND
+        Mtime < DateBeforeTime AND Mtime > DateAfterTime AND NOT Record =~ '^#' AND
+        NOT Record = ''})
+  - name: Custom.Generic.Forensic.Timeline
+    description: |
+      This artifact generates a timeline of a file glob in bodyfile
+      format. We currently do not calculate the md5 because it is quite
+      expensive.
+    parameters:
+    - name: timelineGlob
+      default: /**
+    - name: timelineAccessor
+      default: file
+    - name: ExcludePathRegex
+      default: ^/(proc)
+      description: If this regex matches the path of any directory we do not even
+        descend inside of it.
+      type: regex
+    sources:
+    - precondition: |2
+
+        SELECT OS From info() where OS = 'windows' AND timelineAccessor = 'ntfs'
+      query: |
+        LET RecursionCallback = if(
+            condition=ExcludePathRegex,
+            then="x=>NOT x.OSPath =~ ExcludePathRegex",
+            else="")
+
+        SELECT 0 AS Md5, FullPath,
+               Sys.mft as Inode,
+               Mode.String AS Mode, 0 as Uid, 0 as Gid, Size,
+               Atime, Mtime, Ctime
+        FROM glob(globs=timelineGlob, accessor=timelineAccessor, recursion_callback=RecursionCallback)
+      queries:
+      - LET RecursionCallback=if(condition=ExcludePathRegex, then="x=>NOT x.OSPath
+        =~ ExcludePathRegex", else="")
+      - SELECT 0 AS Md5, FullPath, Sys.mft AS Inode, Mode.String AS Mode, 0 AS Uid,
+        0 AS Gid, Size, Atime, Mtime, Ctime FROM glob(globs=timelineGlob, accessor=timelineAccessor,
+        recursion_callback=RecursionCallback)
+    - precondition: |2
+
+        SELECT * From scope() where timelineAccessor = 'file'
+      query: "LET RecursionCallback = if(\n    condition=ExcludePathRegex,\n    then=\"x=>NOT
+        x.OSPath =~ ExcludePathRegex\",\n    else=\"\")\n         \nSELECT 0 AS Md5,
+        FullPath,\n       Sys.Ino as Inode,\n       Mode.String AS Mode, Sys.Uid AS
+        Uid, Sys.Gid AS Gid, Size,\n       Atime, Mtime, Ctime\nFROM glob(globs=timelineGlob,
+        accessor=timelineAccessor, recursion_callback=RecursionCallback)\n"
+      queries:
+      - LET RecursionCallback=if(condition=ExcludePathRegex, then="x=>NOT x.OSPath
+        =~ ExcludePathRegex", else="")
+      - SELECT 0 AS Md5, FullPath, Sys.Ino AS Inode, Mode.String AS Mode, Sys.Uid
+        AS Uid, Sys.Gid AS Gid, Size, Atime, Mtime, Ctime FROM glob(globs=timelineGlob,
+        accessor=timelineAccessor, recursion_callback=RecursionCallback)
+  - name: Exchange.Linux.Sys.JournalCtl
+    description: |
+      Parse the output of the journalctl command. Journalctl is an interface to the systemd journal, which records information about system events.
+    parameters:
+    - name: Length
+      default: "10000"
+      type: int
+    sources:
+    - query: |2
+
+        LET JCtlOut = SELECT * FROM execve(length=Length, argv=['/usr/bin/journalctl', '-o', 'json'], sep="\n")
+        SELECT
+          timestamp(string=ParsedOutput.__REALTIME_TIMESTAMP) AS Timestamp,
+          ParsedOutput._HOSTNAME AS _Hostname,
+          ParsedOutput.MESSAGE AS Message,
+          ParsedOutput._MACHINE_ID AS _MachineID,
+          ParsedOutput._BOOT_ID AS BootID,
+          ParsedOutput.SYSLOG_IDENTIFIER AS _SyslogIdentifier,
+          ParsedOutput.PRIORITY AS _Priority,
+          ParsedOutput.SYSLOG_FACILITY AS _SyslogFacility,
+          ParsedOutput.__MONOTONIC_TIMESTAMP AS _MonotonicTS,
+          ParsedOutput._SOURCE_MONOTONIC_TIMESTAMP AS _SourceMonoTS,
+          ParsedOutput._TRANSPORT AS _Transport,
+          ParsedOutput.__CURSOR AS Cursor
+        FROM foreach(row={SELECT parse_json(data=Stdout) AS ParsedOutput FROM JCtlOut WHERE Stdout})
+      queries:
+      - LET JCtlOut=SELECT * FROM execve(length=Length, argv= ['/usr/bin/journalctl',
+        '-o', 'json'], sep="\n")
+      - SELECT timestamp(string=ParsedOutput.__REALTIME_TIMESTAMP) AS Timestamp, ParsedOutput._HOSTNAME
+        AS _Hostname, ParsedOutput.MESSAGE AS Message, ParsedOutput._MACHINE_ID AS
+        _MachineID, ParsedOutput._BOOT_ID AS BootID, ParsedOutput.SYSLOG_IDENTIFIER
+        AS _SyslogIdentifier, ParsedOutput.PRIORITY AS _Priority, ParsedOutput.SYSLOG_FACILITY
+        AS _SyslogFacility, ParsedOutput.__MONOTONIC_TIMESTAMP AS _MonotonicTS, ParsedOutput._SOURCE_MONOTONIC_TIMESTAMP
+        AS _SourceMonoTS, ParsedOutput._TRANSPORT AS _Transport, ParsedOutput.__CURSOR
+        AS Cursor FROM foreach(row= { SELECT parse_json(data=Stdout) AS ParsedOutput
+        FROM JCtlOut WHERE Stdout})
+  - name: Collector
+    parameters:
+    - name: Artifacts
+      default: |-
+        [
          "Linux.Sys.Pslist",
-         "Linux.Proc.Modules",
-         "Linux.Sys.Maps",
+         "Exchange.Linux.Sys.JournalCtl",
+         "Linux.Search.FileFinder",
+         "Custom.Generic.Forensic.Timeline",
          "Linux.Network.Netstat",
          "Linux.Proc.Arp",
+         "Linux.Proc.Modules",
+         "Linux.Sys.ACPITables",
+         "Linux.Sys.Maps",
          "Linux.Mounts",
-         "Linux.Detection.AnomalousFiles",
-         "Linux.Sys.SUID",
-         "Linux.Sys.ACPITables"]
+         "Linux.Sys.Services",
+         "Exchange.Linux.System.PAM",
+         "Linux.Detection.AnomalousFiles"
+        ]
+      type: json_array
+    - name: Parameters
+      default: |-
+        {
+         "Linux.Search.FileFinder": {
+          "SearchFilesGlob": "",
+          "SearchFilesGlobTable": "Glob\n/var/log/**\n___files___\n",
+          "Upload_File": "Y"
+         },
+         "Custom.Generic.Forensic.Timeline": {
+          "timelineGlob": "/**"
+         },
+         "Linux.Sys.SUID": {
+          "GlobExpression": "/usr/**"
+         }
+        }
+      type: json
+    - name: encryption_scheme
+      default: Password
+    - name: encryption_args
+      default: |-
+        {
+         "public_key": "",
+         "password": "<PASSWORD>"
+        }
+      type: json
+    - name: Level
+      default: "5"
+      type: int
+    - name: Format
+      default: csv
+    - name: OutputPrefix
+    - name: CpuLimit
+      default: "0"
+      type: int
+    - name: ProgressTimeout
+      default: "0"
+      type: int
+    - name: Timeout
+      default: "0"
+      type: int
+    - name: target_args
+      default: |-
+        {
+         "bucket": "",
+         "GCSKey": "",
+         "credentialsKey": "",
+         "credentialsSecret": "",
+         "region": "",
+         "endpoint": "",
+         "serverSideEncryption": ""
+        }
+      type: json
+    sources:
+    - query: |
+        // Add all the tools we are going to use to the inventory.
+        LET _ <= SELECT inventory_add(tool=ToolName, hash=ExpectedHash)
+         FROM parse_csv(filename="/uploads/inventory.csv", accessor="me")
+         WHERE log(message="Adding tool " + ToolName)
+
+        LET baseline <= SELECT Fqdn, basename(path=Exe) AS Exe FROM info()
+
+        // Make the filename safe on windows but we trust the OutputPrefix.
+        LET filename <= OutputPrefix + regex_replace(
+            source=format(format="Collection-%s-%s",
+                          args=[baseline[0].Fqdn,
+                                timestamp(epoch=now()).MarshalText]),
+            re="[^0-9A-Za-z\\-]", replace="_")
+
+        -- Make a random hex string as a random password
+        LET RandomPassword <= SELECT format(format="%02x",
+              args=rand(range=255)) AS A
+        FROM range(end=25)
+
+        LET pass = SELECT * FROM switch(a={
+
+           -- For X509 encryption we use a random session password.
+           SELECT join(array=RandomPassword.A) as Pass From scope()
+           WHERE encryption_scheme =~ "pgp|x509"
+            AND log(message="I will generate a container password using the %v scheme",
+                    args=encryption_scheme)
+
+        }, b={
+
+           -- Otherwise the user specified the password.
+           SELECT encryption_args.password as Pass FROM scope()
+           WHERE encryption_scheme =~ "password"
+
+        }, c={
+
+           -- No password specified.
+           SELECT Null as Pass FROM scope()
+        })
+
+        -- For X509 encryption_scheme, store the encrypted
+        -- password in the metadata file for later retrieval.
+        LET ContainerMetadata = if(
+            condition=encryption_args.public_key,
+            then=dict(
+               EncryptedPass=pk_encrypt(data=pass[0].Pass,
+                  public_key=encryption_args.public_key,
+               scheme=encryption_scheme),
+            Scheme=encryption_scheme,
+            PublicKey=encryption_args.public_key))
+        LET _ <= log(message="Will collect package " + filename)
+
+        SELECT * FROM collect(artifacts=Artifacts,
+              args=Parameters, output=filename + ".zip",
+              cpu_limit=CpuLimit,
+              progress_timeout=ProgressTimeout,
+              timeout=Timeout,
+              password=pass[0].Pass,
+              level=Level,
+              format=Format,
+              metadata=ContainerMetadata)
+  - name: Generic.Utils.FetchBinary
+    parameters:
+    - name: SleepDuration
+      default: "0"
+      type: int
+    - name: ToolName
+    - name: ToolInfo
+    - name: IsExecutable
+      default: "Y"
+      type: bool
+    sources:
+    - query: |
+        LET RequiredTool <= ToolName
+
+        LET matching_tools <= SELECT ToolName, Filename
+        FROM parse_csv(filename="/uploads/inventory.csv", accessor="me")
+        WHERE RequiredTool = ToolName
+
+        LET get_ext(filename) = parse_string_with_regex(
+              regex="(\\.[a-z0-9]+)$", string=filename).g1
+
+        LET temp_binary <= if(condition=matching_tools,
+        then=tempfile(
+                 extension=get_ext(filename=matching_tools[0].Filename),
+                 remove_last=TRUE,
+                 permissions=if(condition=IsExecutable, then="x")))
+
+        SELECT copy(filename=Filename, accessor="me", dest=temp_binary) AS FullPath,
+               Filename AS Name
+        FROM matching_tools

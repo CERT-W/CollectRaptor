@@ -21,7 +21,10 @@ class LinuxFromForensicArtifacts:
                 'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/unix_common.yaml',
                 'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/shell.yaml',
                 'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/linux_proc.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/linux_services.yaml'
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/linux_services.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/webservers.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/tomcat.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/database_servers.yaml'
         ]
 
         base_dir = pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent
