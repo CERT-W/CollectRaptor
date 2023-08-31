@@ -28,7 +28,7 @@ class VelociraptorPacker:
         elif os_version == OsArchitecture.Windows_x86:
             velociraptor_version = 'linux-amd64'
         elif os_version == OsArchitecture.Linux_x64:
-            velociraptor_version = 'linux-amd64'
+            velociraptor_version = 'linux-amd64-musl'
         else:
             logger.error(f'Unsupported of Velociraptor version specified: {os_version}')
             exit(1)
