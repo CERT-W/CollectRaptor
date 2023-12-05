@@ -70,35 +70,12 @@ autoexec:
     - name: timelineAccessor
       default: file
     - name: ExcludePathRegex
-      default: ^/(proc)
+      default: ^/(proc|var/lib/docker)
       description: If this regex matches the path of any directory we do not even
         descend inside of it.
       type: regex
     sources:
-    - precondition: |2
-
-        SELECT OS From info() where OS = 'windows' AND timelineAccessor = 'ntfs'
-      query: |
-        LET RecursionCallback = if(
-            condition=ExcludePathRegex,
-            then="x=>NOT x.OSPath =~ ExcludePathRegex",
-            else="")
-
-        SELECT 0 AS Md5, FullPath,
-               Sys.mft as Inode,
-               Mode.String AS Mode, 0 as Uid, 0 as Gid, Size,
-               Atime, Mtime, Ctime
-        FROM glob(globs=timelineGlob, accessor=timelineAccessor, recursion_callback=RecursionCallback)
-      queries:
-      - LET RecursionCallback=if(condition=ExcludePathRegex, then="x=>NOT x.OSPath
-        =~ ExcludePathRegex", else="")
-      - SELECT 0 AS Md5, FullPath, Sys.mft AS Inode, Mode.String AS Mode, 0 AS Uid,
-        0 AS Gid, Size, Atime, Mtime, Ctime FROM glob(globs=timelineGlob, accessor=timelineAccessor,
-        recursion_callback=RecursionCallback)
-    - precondition: |2
-
-        SELECT * From scope() where timelineAccessor = 'file'
-      query: "LET RecursionCallback = if(\n    condition=ExcludePathRegex,\n    then=\"x=>NOT
+    - query: "LET RecursionCallback = if(\n    condition=ExcludePathRegex,\n    then=\"x=>NOT
         x.OSPath =~ ExcludePathRegex\",\n    else=\"\")\n         \nSELECT 0 AS Md5,
         FullPath,\n       Sys.Ino as Inode,\n       Mode.String AS Mode, Sys.Uid AS
         Uid, Sys.Gid AS Gid, Size,\n       Atime, Mtime, Ctime\nFROM glob(globs=timelineGlob,
@@ -170,8 +147,10 @@ autoexec:
         {
          "Linux.Search.FileFinder": {
           "SearchFilesGlob": "",
-          "SearchFilesGlobTable": "Glob\n/var/log/**\n___files___\n",
-          "Upload_File": "Y"
+          "SearchFilesGlobTable": "Glob\n/var/log/**\n/run/log/**\n___files___\n",
+          "Upload_File": "Y",
+          "LocalFilesystemOnly": "N",
+          "ExcludePathRegex": "^/proc"
          },
          "Custom.Generic.Forensic.Timeline": {
           "timelineGlob": "/**"

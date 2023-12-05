@@ -27,7 +27,7 @@ class VelociraptorPacker:
     def __download_binary_builder(os_version: OsArchitecture, output_folder: str) -> str:
         URL_WINDOWS_X86 = 'https://github.com/Velocidex/velociraptor/releases/download/v0.6.7-5/velociraptor-v0.6.7-windows-386.exe'
         URL_WINDOWS_X64 = 'https://github.com/Velocidex/velociraptor/releases/download/v0.6.7-5/velociraptor-v0.6.7-4-windows-amd64.exe'
-        URL_LINUX = 'https://github.com/Velocidex/velociraptor/releases/download/v0.6.7-5/velociraptor-v0.6.7-4-linux-amd64'
+        URL_LINUX = 'https://github.com/Velocidex/velociraptor/releases/download/v0.6.7-5/velociraptor-v0.6.7-4-linux-amd64-musl'
 
         velociraptor_url = ''
         if os_version == OsArchitecture.Windows_x64:
@@ -67,7 +67,7 @@ class VelociraptorPacker:
         elif os_version == OsArchitecture.Windows_x86:
             velociraptor_version_alternate = 'windows-386.exe'
         elif os_version == OsArchitecture.Linux_x64:
-            velociraptor_version_alternate = 'linux-amd64'
+            velociraptor_version_alternate = 'linux-amd64-musl'
         else:
             logger.error(f'Unsupported Velociraptor version specified for collector: {os_version}')
             exit(1)
