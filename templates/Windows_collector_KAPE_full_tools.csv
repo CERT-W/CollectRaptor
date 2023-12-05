@@ -1,0 +1,4 @@
+"ToolName","EndpointFilename","Source"
+"Autorun_386","autorunsc.exe","https://live.sysinternals.com/tools/autorunsc.exe"
+"Autorun_amd64","autorunsc64.exe","https://live.sysinternals.com/tools/autorunsc64.exe"
+"hollows_hunter","hollows_hunter64.exe","https://github.com/hasherezade/hollows_hunter/releases/download/v0.3.8.1/hollows_hunter64.exe"

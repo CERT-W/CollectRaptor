@@ -24,9 +24,7 @@ class WindowsFromKapeTargets:
         self.template = None
         self.output_config = None
         self.output_binary = None
-        self.tools_csv = tools_csv if tools_csv else os.path.join(base_dir,
-                                                                  'templates',
-                                                                  'Windows_collector_tools.csv')
+        self.tools_csv = tools_csv
 
         if self.artifacts_set == 'kape_light':
             self.template = os.path.join(base_dir,
@@ -35,7 +33,12 @@ class WindowsFromKapeTargets:
             self.output_config = os.path.join(output_dir,
                                               'Windows_collector_KAPE_light.yaml')
             self.output_binary = os.path.join(output_dir,
-                                              'Windows_collector_KAPE_light.exe')
+                                              'Windows_collector_light.exe')
+            if not self.tools_csv:
+                self.tools_csv = os.path.join(base_dir,
+                                              'templates',
+                                              'Windows_collector_KAPE_light_tools.csv')
+
 
         elif self.artifacts_set == 'kape_full':
             self.template = os.path.join(base_dir,
@@ -44,7 +47,21 @@ class WindowsFromKapeTargets:
             self.output_config = os.path.join(output_dir,
                                               'Windows_collector_KAPE_full.yaml')
             self.output_binary = os.path.join(output_dir,
-                                              'Windows_collector_KAPE_full.exe')
+                                              'Windows_collector_full.exe')
+            if not self.tools_csv:
+                self.tools_csv = os.path.join(base_dir,
+                                              'templates',
+                                              'Windows_collector_KAPE_full_tools.csv')
+
+        elif self.artifacts_set == 'kape_dc':
+            self.tools_csv = None
+            self.template = os.path.join(base_dir,
+                                         'templates',
+                                         'Windows_collector_KAPE_ADDS_DC.template')
+            self.output_config = os.path.join(output_dir,
+                                              'Windows_collector_KAPE_ADDS_DC.yaml')
+            self.output_binary = os.path.join(output_dir,
+                                              'Windows_collector_DC.exe')
 
 
     def create_config(self) -> str:

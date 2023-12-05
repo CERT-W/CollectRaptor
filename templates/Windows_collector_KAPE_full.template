@@ -222,21 +222,57 @@ autoexec:
         Pid, Name, _Address, AddressRange
       - SELECT *, process_tracker_callchain(id=Pid).Data AS ProcessChain FROM if(condition=UploadSection,
         then=upload_section, else=results)
+  - name: Exchange.Windows.Memory.HollowsHunter
+    description: |
+      Use hollows_hunter to detect suspicious process injections.
+
+      Upload any findings to the server, including process dumps.
+    tools:
+    - name: hollows_hunter
+      github_project: hasherezade/hollows_hunter
+      github_asset_regex: hollows_hunter64.exe
+      serve_locally: true
+    sources:
+    - name: Output
+      query: "-- Get the path to the hollows_hunter tool and a fresh temp directory.\\\nLET
+        TempDir <= tempdir(remove_last=TRUE)\nLET binaries <= SELECT FullPath\nFROM
+        Artifact.Generic.Utils.FetchBinary(ToolName=\"hollows_hunter\")\n\n-- Run
+        the tool and relay back the output, as well as upload all the files from the
+        tempdir.\nSELECT *\nFROM execve(argv=[binaries[0].FullPath, \"/hooks\", \"/threads\", \"/shellc\", \"B\", \"/obfusc\", \"A\", \"/json\", \"/dir\", TempDir], sep=\"\\n\")\n     \n"
+      queries:
+      - LET TempDir <= tempdir(remove_last=TRUE)
+      - LET binaries <= SELECT FullPath FROM Artifact.Generic.Utils.FetchBinary(ToolName="hollows_hunter")
+      - SELECT * FROM execve(argv=[binaries[0].FullPath, "/hooks", "/threads", "/shellc", "B", "/obfusc", "A", "/json", "/dir", TempDir], sep="\n")
+    - name: Summary
+      query: "LET LookupPid(pid) = SELECT Name, CommandLine, Exe FROM pslist(pid=pid)\n\nSELECT
+        *, LookupPid(pid=pid)[0] AS ProcessInfo\nFROM foreach(row=parse_json(\n      data=read_file(filename=TempDir
+        + \"/summary.json\")).suspicious)  \n      \n"
+      queries:
+      - LET LookupPid(pid) = SELECT Name, CommandLine, Exe FROM pslist(pid=pid)
+      - SELECT *, LookupPid(pid=pid)[0] AS ProcessInfo FROM foreach(row=parse_json(data=read_file(filename=TempDir
+        + "/summary.json")).suspicious)
+    - name: Uploads
+      query: |
+        SELECT upload(file=FullPath) AS Upload
+        FROM glob(globs="*", root=TempDir)
+      queries:
+      - SELECT upload(file=FullPath) AS Upload FROM glob(globs="*", root=TempDir)
   - name: Collector
     parameters:
     - name: Artifacts
       default: |-
         [
-         "Windows.KapeFiles.Targets",
-         "Windows.Search.FileFinder",
          "Windows.System.Pslist",
+         "Windows.Network.NetstatEnriched",
+         "Windows.KapeFiles.Targets",
          "Exchange.Custom.Windows.Triage.HighValueMemory",
          "Exchange.Windows.Detection.Malfind",
-         "Windows.Network.NetstatEnriched",
+         "Windows.Search.FileFinder",
          "Windows.System.UntrustedBinaries",
          "Windows.Detection.BinaryRename",
+         "Exchange.Windows.Memory.HollowsHunter",
          "Windows.Sysinternals.Autoruns"
-        ]
+         ]
       type: json_array
     - name: Parameters
       default: |-

@@ -1,3 +1,3 @@
 "ToolName","EndpointFilename","Source"
-"Autorun_x86","autorunsc.exe","https://live.sysinternals.com/tools/autorunsc.exe"
+"Autorun_386","autorunsc.exe","https://live.sysinternals.com/tools/autorunsc.exe"
 "Autorun_amd64","autorunsc64.exe","https://live.sysinternals.com/tools/autorunsc64.exe"

@@ -9,7 +9,7 @@ standalone binary to collect forensic artifacts.
 `CollectRaptor` currently supports the following target operating systems and
 collection profiles:
 
-  - `Windows` (x86 / x64) with `Velociraptor` built-in
+  - `Windows` (x86 / x64) endpoints with `Velociraptor` built-in
     `Windows.KapeFiles.Targets` artifact.
 
     Template files:
@@ -17,19 +17,26 @@ collection profiles:
       - [`Windows_collector_KAPE_full.template`](./templates/Windows_collector_KAPE_full.template)
 
 
-  - `Linux` (x64) with artifact definitions retrieved from the
+  - `Linux` (x64) endpoints with artifact definitions retrieved from the
     [ForensicArtifacts's artifacts](https://github.com/ForensicArtifacts/artifacts)
     repository and collected with the `Linux.Search.FileFinder` artifact.
 
     Template file:
       - [`Linux_collector.template`](./templates/Linux_collector.template)
 
+
+  - `Windows` (x86 / x64) domain controllers, to notably retrieve event logs
+    and the `User Access Logging` artifact.
+
+    Template file:
+      - [`Windows_collector_KAPE_ADDS_DC.template`](./templates/Windows_collector_KAPE_ADDS_DC.template)
+
 ### Usage
 
 ###### Quick usage
 
 ```
-CollectRaptor [-h] [-t TEMPLATE] [-o OUTPUT] [--only-conf ONLY_CONF] [--velo-path VELO_PATH] {Windows,Linux}
+CollectRaptor [-h] [-t TEMPLATE] [--tools-csv TOOLS_CSV] [-o OUTPUT] [--only-conf ONLY_CONF] [--velo-path VELO_PATH] {Windows,Linux}
 ```
 
 ###### Windows collector
@@ -38,12 +45,14 @@ CollectRaptor [-h] [-t TEMPLATE] [-o OUTPUT] [--only-conf ONLY_CONF] [--velo-pat
 CollectRaptor Windows [-h] [-a {x86,x64}] {kape_light,kape_full} ...
 
 positional arguments:
-  {kape_light,kape_full}
+  {kape_light,kape_full,kape_dc}
 
 common arguments:
     -h, --help            show this help message and exit
     -t TEMPLATE, --template TEMPLATE
                           Template file to parametrize
+    --tools-csv TOOLS_CSV
+                          CSV file containing the tools to download
     -o OUTPUT, --output OUTPUT
                           Output directory for the config file and packed Velociraptor binary
     --only-conf ONLY_CONF
@@ -69,6 +78,8 @@ common arguments:
     -h, --help            show this help message and exit
     -t TEMPLATE, --template TEMPLATE
                           Template file to parametrize
+    --tools-csv TOOLS_CSV
+                          CSV file containing the tools to download
     -o OUTPUT, --output OUTPUT
                           Output directory for the config file and packed Velociraptor binary
     --only-conf ONLY_CONF

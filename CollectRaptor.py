@@ -53,12 +53,12 @@ if __name__ == '__main__':
     parser_windows_subparsers = parser_windows.add_subparsers(dest='artifacts_set')
     parser_windows_subparsers.add_parser('kape_light')
     parser_windows_subparsers.add_parser('kape_full')
+    parser_windows_subparsers.add_parser('kape_dc')
     parser_windows.add_argument('-a', '--architecture',
                                 choices=['x86', 'x64'],
                                 default='x64',
                                 help='Target operating system architecture',
                                 dest='os_architecture')
-
     # Subparser for Linux.
     parser_linux = subparsers.add_parser(OsSimpleName.Linux.value)
     parser_linux_subparsers = parser_linux.add_subparsers(dest='artifacts_set')
@@ -78,6 +78,10 @@ if __name__ == '__main__':
             parser_windows.print_help()
         elif args.target_os == OsSimpleName.Linux.value:
             parser_linux.print_help()
+        exit(1)
+
+    if args.tools_csv and not os.path.isfile(args.tools_csv):
+        logger.error(f"'{args.tools_csv}' does not exist / is not a valid file.")
         exit(1)
 
     collector_builder = None

@@ -158,11 +158,11 @@ autoexec:
     - name: Artifacts
       default: |-
         [
-         "Windows.KapeFiles.Targets",
-         "Windows.Search.FileFinder",
          "Windows.System.Pslist",
-         "Exchange.Windows.Detection.Malfind",
          "Windows.Network.NetstatEnriched",
+         "Windows.KapeFiles.Targets",
+         "Exchange.Windows.Detection.Malfind",
+         "Windows.Search.FileFinder",
          "Windows.System.UntrustedBinaries",
          "Windows.Detection.BinaryRename",
          "Windows.Sysinternals.Autoruns"
