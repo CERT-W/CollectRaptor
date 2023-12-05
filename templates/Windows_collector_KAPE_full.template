@@ -61,8 +61,8 @@ autoexec:
                     SELECT ProcessName,
                            CommandLine,
                            Pid,
-                           FullPath,
-                           upload(file=FullPath,
+                           OSPath,
+                           upload(file=OSPath,
                                   name=format(format="%v_%v",args=[ProcessName,Pid])) as CrashDump
                     FROM proc_dump(pid=Pid)
                 }
@@ -75,7 +75,7 @@ autoexec:
       - LET processList=SELECT * FROM foreach(row=processRegexList, query= { SELECT
         * FROM processes(processRegex=processName)})
       - SELECT * FROM foreach(row=processList, query= { SELECT ProcessName, CommandLine,
-        Pid, FullPath, upload(file=FullPath, name=format(format="%v_%v", args= [ProcessName,
+        Pid, OSPath, upload(file=OSPath, name=format(format="%v_%v", args= [ProcessName,
         Pid])) AS CrashDump FROM proc_dump(pid=Pid)})
   - name: Exchange.Windows.Detection.Malfind
     description: "This artifact checks the VAD for executable sections that are not
@@ -235,14 +235,14 @@ autoexec:
     sources:
     - name: Output
       query: "-- Get the path to the hollows_hunter tool and a fresh temp directory.\\\nLET
-        TempDir <= tempdir(remove_last=TRUE)\nLET binaries <= SELECT FullPath\nFROM
+        TempDir <= tempdir(remove_last=TRUE)\nLET binaries <= SELECT OSPath\nFROM
         Artifact.Generic.Utils.FetchBinary(ToolName=\"hollows_hunter\")\n\n-- Run
         the tool and relay back the output, as well as upload all the files from the
-        tempdir.\nSELECT *\nFROM execve(argv=[binaries[0].FullPath, \"/hooks\", \"/threads\", \"/shellc\", \"B\", \"/obfusc\", \"A\", \"/json\", \"/dir\", TempDir], sep=\"\\n\")\n     \n"
+        tempdir.\nSELECT *\nFROM execve(argv=[binaries[0].OSPath, \"/hooks\", \"/threads\", \"/shellc\", \"B\", \"/obfusc\", \"A\", \"/json\", \"/dir\", TempDir], sep=\"\\n\")\n     \n"
       queries:
       - LET TempDir <= tempdir(remove_last=TRUE)
-      - LET binaries <= SELECT FullPath FROM Artifact.Generic.Utils.FetchBinary(ToolName="hollows_hunter")
-      - SELECT * FROM execve(argv=[binaries[0].FullPath, "/hooks", "/threads", "/shellc", "B", "/obfusc", "A", "/json", "/dir", TempDir], sep="\n")
+      - LET binaries <= SELECT OSPath FROM Artifact.Generic.Utils.FetchBinary(ToolName="hollows_hunter")
+      - SELECT * FROM execve(argv=[binaries[0].OSPath, "/hooks", "/threads", "/shellc", "B", "/obfusc", "A", "/json", "/dir", TempDir], sep="\n")
     - name: Summary
       query: "LET LookupPid(pid) = SELECT Name, CommandLine, Exe FROM pslist(pid=pid)\n\nSELECT
         *, LookupPid(pid=pid)[0] AS ProcessInfo\nFROM foreach(row=parse_json(\n      data=read_file(filename=TempDir
@@ -253,10 +253,10 @@ autoexec:
         + "/summary.json")).suspicious)
     - name: Uploads
       query: |
-        SELECT upload(file=FullPath) AS Upload
+        SELECT upload(file=OSPath) AS Upload
         FROM glob(globs="*", root=TempDir)
       queries:
-      - SELECT upload(file=FullPath) AS Upload FROM glob(globs="*", root=TempDir)
+      - SELECT upload(file=OSPath) AS Upload FROM glob(globs="*", root=TempDir)
   - name: Collector
     parameters:
     - name: Artifacts
@@ -362,14 +362,33 @@ autoexec:
          FROM parse_csv(filename="/uploads/inventory.csv", accessor="me")
          WHERE log(message="Adding tool " + ToolName)
 
-        LET baseline <= SELECT Fqdn, basename(path=Exe) AS Exe FROM info()
+        LET baseline <= SELECT Fqdn, dirname(path=Exe) AS ExePath, Exe,
+           scope().CWD AS CWD FROM info()
 
-        // Make the filename safe on windows but we trust the OutputPrefix.
-        LET filename <= OutputPrefix + regex_replace(
-            source=format(format="Collection-%s-%s",
-                          args=[baseline[0].Fqdn,
-                                timestamp(epoch=now()).MarshalText]),
-            re="[^0-9A-Za-z\\-]", replace="_")
+        LET OutputPrefix <= if(condition= OutputPrefix,
+          then=pathspec(parse=OutputPrefix),
+          else= if(condition= baseline[0].CWD,
+            then=pathspec(parse= baseline[0].CWD),
+            else=pathspec(parse= baseline[0].ExePath)))
+
+        LET _ <= log(message="Output Prefix : %v", args= OutputPrefix)
+
+        LET FormatMessage(Message) = regex_transform(
+            map=dict(`%FQDN%`=baseline[0].Fqdn,
+                     `%Timestamp%`=timestamp(epoch=now()).MarshalText),
+            source=Message)
+
+        // Format the filename safely according to the filename
+        // template. This will be the name uploaded to the bucket.
+        LET formatted_zip_name <= regex_replace(
+            source=expand(path=FormatMessage(Message=FilenameTemplate)),
+            re="[^0-9A-Za-z\\-]", replace="_") + ".zip"
+
+        // This is where we write the files on the endpoint.
+        LET zip_filename <= OutputPrefix + formatted_zip_name
+
+        // The log is always written to the executable path
+        LET log_filename <= pathspec(parse= baseline[0].Exe + ".log")
 
         -- Make a random hex string as a random password
         LET RandomPassword <= SELECT format(format="%02x",
@@ -444,6 +463,6 @@ autoexec:
                  remove_last=TRUE,
                  permissions=if(condition=IsExecutable, then="x")))
 
-        SELECT copy(filename=Filename, accessor="me", dest=temp_binary) AS FullPath,
+        SELECT copy(filename=Filename, accessor="me", dest=temp_binary) AS OSPath,
                Filename AS Name
         FROM matching_tools
