@@ -6,9 +6,10 @@ import sys
 
 from loguru import logger
 
+from builder.CommonFromYara import CommonFromYara
 from builder.LinuxFromForensicArtifacts import LinuxFromForensicArtifacts
 from builder.WindowsFromKapeTargets import WindowsFromKapeTargets
-from helpers.arguments import add_ForensicArtifacts_args
+from helpers.arguments import add_ForensicArtifacts_args, add_yara_args
 from helpers.enum import OsArchitecture, OsSimpleName
 
 from helpers.VelociraptorPacker import VelociraptorPacker
@@ -54,6 +55,10 @@ if __name__ == '__main__':
     parser_windows_subparsers.add_parser('kape_light')
     parser_windows_subparsers.add_parser('kape_full')
     parser_windows_subparsers.add_parser('kape_dc')
+
+    parser_windows_yara = parser_windows_subparsers.add_parser('yara')
+    add_yara_args(parser_windows_yara)
+
     parser_windows.add_argument('-a', '--architecture',
                                 choices=['x86', 'x64'],
                                 default='x64',
@@ -71,6 +76,9 @@ if __name__ == '__main__':
     parser_linux_forensic_artifacts = parser_linux_subparsers.add_parser('forensic_artifacts')
     add_ForensicArtifacts_args(parser_linux_forensic_artifacts)
 
+    parser_linux_yara = parser_linux_subparsers.add_parser('yara')
+    add_yara_args(parser_linux_yara)
+
     args = args_parser.parse_args()
 
     if args.artifacts_set is None:
@@ -86,8 +94,23 @@ if __name__ == '__main__':
 
     collector_builder = None
 
-    # Process Windows target OS.
-    if args.target_os == OsSimpleName.Windows.value:
+    # Process both Windows and Linux target OS for yara rules scanning.
+    if args.artifacts_set == 'yara':
+        if not os.path.exists(args.yara_input):
+            logger.error(f"'{args.yara_input}' does not exist / is not a valid file or folder.")
+            exit(1)
+        target_os = OsArchitecture.Linux_x64 if args.target_os == OsSimpleName.Linux.value \
+                    else (OsArchitecture.Windows_x64 if args.target_os == OsSimpleName.Windows.value and args.os_architecture == 'x64' else OsArchitecture.Windows_x86)
+
+        collector_builder = CommonFromYara(target_os,
+                                           args.zip_password,
+                                           args.yara_input,
+                                           template=args.template,
+                                           output_dir=args.output,
+                                           tools_csv=args.tools_csv)
+
+    # Process Windows target OS for collection.
+    elif args.target_os == OsSimpleName.Windows.value:
         target_os = OsArchitecture.Windows_x64 if args.os_architecture == 'x64' else OsArchitecture.Windows_x86
 
         if args.artifacts_set.startswith('kape'):
@@ -97,15 +120,16 @@ if __name__ == '__main__':
                                                        output_dir=args.output,
                                                        tools_csv=args.tools_csv)
 
+    # Process Linux target OS for collection.
     elif args.target_os == OsSimpleName.Linux.value:
         target_os = OsArchitecture.Linux_x64
 
         if args.artifacts_set == 'forensic_artifacts':
             collector_builder = LinuxFromForensicArtifacts(target_os,
                                                            args.zip_password,
+                                                           template=args.template,
                                                            yaml_urls=args.yaml_urls,
                                                            yaml_files=args.yaml_files,
-                                                           template=args.template,
                                                            output_dir=args.output)
 
     config_file_path = collector_builder.create_config()

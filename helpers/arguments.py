@@ -10,3 +10,9 @@ def add_ForensicArtifacts_args(parser):
                         nargs='+',
                         dest='yaml_files',
                         help='One or more artifacts YAML file(s)')
+
+def add_yara_args(parser):
+    parser.add_argument('-i', '--input',
+                        dest='yara_input',
+                        required=True,
+                        help='A file or folder containing yara rules')

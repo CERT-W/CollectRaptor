@@ -11,7 +11,7 @@ from helpers.VelociraptorPacker import VelociraptorPacker
 
 
 class LinuxFromForensicArtifacts:
-    def __init__(self, target_os: OsArchitecture, zip_password: str, yaml_files: list = None, yaml_urls: str = None, template: str = None, output_dir: str = None):
+    def __init__(self, target_os: OsArchitecture, zip_password: str, template: str = None, yaml_files: list = None, yaml_urls: str = None, output_dir: str = None):
         self.target_os = target_os
         self.zip_password = zip_password
 

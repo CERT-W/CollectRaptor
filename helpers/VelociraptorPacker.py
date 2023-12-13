@@ -97,7 +97,7 @@ class VelociraptorPacker:
 
                 return output_path
 
-    """_summary_
+    """
     Download the artifacts from the artifact exchange.
     Currently not used as all artifacts are bundled in the template config file.
     """
