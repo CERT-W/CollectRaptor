@@ -1,7 +1,7 @@
 autoexec:
   argv: ["artifacts", "collect", "-v",
     "Windows.System.Pslist", "Windows.Network.NetstatEnriched", "Windows.KapeFiles.Targets",
-      "--output", "$COMPUTERNAME-ADDS-Collection.zip", "--password", "<PASSWORD>",
+      "--output", "Velociraptor_ADDS_$COMPUTERNAME.zip", "--password", "<PASSWORD>",
       "--args", "Device=C:",
       # Run the collection across all VSS and collect only unique changes.
       "--args", "VSSAnalysis=Y",

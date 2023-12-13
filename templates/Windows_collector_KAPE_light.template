@@ -4,7 +4,7 @@ autoexec:
   - collect
   - Collector
   - --logfile
-  - Velociraptor_$COMPUTERNAME.log
+  - Velociraptor_Collection-Light_$COMPUTERNAME.log
   - -v
   - --require_admin
   artifact_definitions:
@@ -219,6 +219,8 @@ autoexec:
     - name: Format
       default: csv
     - name: OutputPrefix
+    - name: FilenameTemplate
+      default: Velociraptor_Collection-Light_%FQDN%_%TIMESTAMP%
     - name: CpuLimit
       default: "0"
       type: int
@@ -310,10 +312,10 @@ autoexec:
                scheme=encryption_scheme),
             Scheme=encryption_scheme,
             PublicKey=encryption_args.public_key))
-        LET _ <= log(message="Will collect package " + filename)
+        LET _ <= log(message="Will collect package %v", args=zip_filename)
 
         SELECT * FROM collect(artifacts=Artifacts,
-              args=Parameters, output=filename + ".zip",
+              args=Parameters, output=zip_filename,
               cpu_limit=CpuLimit,
               progress_timeout=ProgressTimeout,
               timeout=Timeout,
