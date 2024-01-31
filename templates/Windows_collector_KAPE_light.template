@@ -187,11 +187,11 @@ autoexec:
           "PowerShellConsole": "Y",
           "RemoteAdmin": "Y",
           "RDPCache": "Y",
+          "ThumbCache": "Y",
           "ScheduledTasks": "Y",
           "StartupFolders": "Y",
           "StartupInfo": "Y",
           "USBDetective": "Y",
-          "WSL": "Y",
           "WebBrowsers": "Y",
           "WindowsFirewall": "Y",
           "WindowsTimeline": "Y"
