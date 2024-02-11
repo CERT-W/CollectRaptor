@@ -17,14 +17,14 @@ class LinuxFromForensicArtifacts:
 
         self.yaml_files = yaml_files
         self.yaml_urls = yaml_urls if yaml_urls else [
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/linux.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/unix_common.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/shell.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/linux_proc.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/linux_services.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/webservers.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/tomcat.yaml',
-                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/data/database_servers.yaml'
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/linux.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/unix_common.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/shell.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/linux_proc.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/linux_services.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/webservers.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/tomcat.yaml',
+                'https://raw.githubusercontent.com/ForensicArtifacts/artifacts/main/artifacts/data/database_servers.yaml'
         ]
 
         base_dir = pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent
