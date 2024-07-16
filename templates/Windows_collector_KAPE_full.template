@@ -272,50 +272,49 @@ autoexec:
          "Windows.Detection.BinaryRename",
          "Exchange.Windows.Memory.HollowsHunter",
          "Windows.Sysinternals.Autoruns"
-         ]
+        ]
       type: json_array
     - name: Parameters
       default: |-
         {
          "Windows.KapeFiles.Targets": {
           "VSSAnalysis": "Y",
-          "Antivirus": "Y",
+          "KapeTriage": "Y",
+          "CombinedLogs": "Y",
+          "ServerTriage": "Y",
+          "WindowsServerDNSAndDHCP": "Y",
+          "IISConfiguration": "Y",
+          "RemoteAdmin": "Y",
+          "MessagingClients": "Y",
+          "FTPClients": "Y",
+          "SQLiteDatabases": "Y",
+          "FileExplorerReplacements": "Y",
+          "WindowsIndexSearch": "Y",
+          "PushNotification": "Y",
+          "ActiveDirectoryNTDS": "Y",
+          "_MFTMirr": "Y",
+          "ThumbCache": "Y",
           "BITS": "Y",
           "CertUtil": "Y",
-          "InternetExplorer": "Y",
-          "KapeTriage": "Y",
-          "LinuxOnWindowsProfileFiles": "Y",
-          "_MFTMirr": "Y",
-          "MicrosoftOneNote": "Y",
-          "MicrosoftStickyNotes": "Y",
-          "MSSQLErrorLog": "Y",
-          "MiniTimelineCollection": "Y",
-          "Notepad__": "Y",
-          "PowerShellConsole": "Y",
-          "RecycleBin": "Y",
-          "RemoteAdmin": "Y",
-          "RDPCache": "Y",
-          "ScheduledTasks": "Y",
+          "MOF": "Y",
+          "GroupPolicy": "Y",
           "StartupFolders": "Y",
           "StartupInfo": "Y",
-          "USBDetective": "Y",
-          "WSL": "Y",
-          "WebBrowsers": "Y",
-          "WindowsFirewall": "Y",
-          "WindowsTimeline": "Y",
-          "Exchange": "Y",
-          "ExchangeClientAccess": "Y",
-          "LiveUserFiles": "Y",
+          "LinuxOnWindowsProfileFiles": "Y",
+          "Notepad": "Y",
+          "Notepad__": "Y",
+          "Megasync": "Y",
+          "RecycleBin": "Y",
           "MemoryFiles": "Y",
-          "GroupPolicy": "Y",
+          "WSL": "Y",
           "OutlookPSTOST": "Y",
-          "FileExplorerReplacements": "Y"
+          "OfficeAutosave": "Y"
          },
          "Windows.Search.FileFinder": {
           "Upload_File": "Y",
-          "SearchFilesGlob": "*\\$MFT",
-          "SearchFilesGlobTable": "Glob\n",
-          "Accessor": "ntfs"
+          "Calculate_Hash": "Y",
+          "SearchFilesGlobTable": "Glob\n*\\$MFT\n*\\Windows\\System32\\winevt\\Logs\\*",
+          "Accessor": "ntfs_vss"
          }
         }
       type: json

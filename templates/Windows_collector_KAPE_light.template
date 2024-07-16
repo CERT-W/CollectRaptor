@@ -172,35 +172,36 @@ autoexec:
       default: |-
         {
          "Windows.KapeFiles.Targets": {
-          "Antivirus": "Y",
+          "KapeTriage": "Y",
+          "CombinedLogs": "Y",
+          "ServerTriage": "Y",
+          "WindowsServerDNSAndDHCP": "Y",
+          "IISConfiguration": "Y",
+          "RemoteAdmin": "Y",
+          "MessagingClients": "Y",
+          "FTPClients": "Y",
+          "SQLiteDatabases": "Y",
+          "FileExplorerReplacements": "Y",
+          "WindowsIndexSearch": "Y",
+          "PushNotification": "Y",
+          "ActiveDirectoryNTDS": "Y",
+          "_MFTMirr": "Y",
+          "ThumbCache": "Y",
           "BITS": "Y",
           "CertUtil": "Y",
-          "InternetExplorer": "Y",
-          "KapeTriage": "Y",
-          "LinuxOnWindowsProfileFiles": "Y",
-          "_MFTMirr": "Y",
-          "MicrosoftOneNote": "Y",
-          "MicrosoftStickyNotes": "Y",
-          "MSSQLErrorLog": "Y",
-          "MiniTimelineCollection": "Y",
-          "Notepad__": "Y",
-          "PowerShellConsole": "Y",
-          "RemoteAdmin": "Y",
-          "RDPCache": "Y",
-          "ThumbCache": "Y",
-          "ScheduledTasks": "Y",
+          "GroupPolicy": "Y",
           "StartupFolders": "Y",
           "StartupInfo": "Y",
-          "USBDetective": "Y",
-          "WebBrowsers": "Y",
-          "WindowsFirewall": "Y",
-          "WindowsTimeline": "Y"
+          "LinuxOnWindowsProfileFiles": "Y",
+          "Notepad": "Y",
+          "Notepad__": "Y",
+          "Megasync": "Y"
          },
          "Windows.Search.FileFinder": {
           "Upload_File": "Y",
-          "SearchFilesGlob": "*\\$MFT",
-          "SearchFilesGlobTable": "Glob\n",
-          "Accessor": "ntfs"
+          "Calculate_Hash": "Y",
+          "SearchFilesGlobTable": "Glob\n*\\Windows\\System32\\winevt\\Logs\\Security.evtx",
+          "Accessor": "ntfs_vss"
          }
         }
       type: json
