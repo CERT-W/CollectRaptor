@@ -59,7 +59,8 @@ class VelociraptorPacker:
     """
     @staticmethod
     def __download_binary_alternate(os_version: OsArchitecture, output_folder: str) -> str:
-        url = 'https://api.github.com/repos/Velocidex/velociraptor/releases/latest'
+        # Latest url = 'https://api.github.com/repos/Velocidex/velociraptor/releases/latest'
+        url = 'https://api.github.com/repos/Velocidex/velociraptor/releases/tags/v0.74'
 
         velociraptor_version_alternate = ''
         if os_version == OsArchitecture.Windows_x64:
@@ -76,7 +77,8 @@ class VelociraptorPacker:
         logger.info(f'Retrieving Velociraptor last release information to download base binary for {os_version.value}...')
         r = requests.get(url)
         if r.status_code != 200:
-            logger.error(f'Couldn\'t retrieve Velociraptor last release information, status code = {r.status_code}')
+            # logger.error(f'Couldn\'t retrieve Velociraptor last release information, status code = {r.status_code}')
+            logger.error(f'Couldn\'t retrieve Velociraptor v0.74.1 information, status code = {r.status_code}')
             exit(1)
 
         assets = r.json()['assets']
